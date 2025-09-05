@@ -6,7 +6,7 @@ class BoidsSimulator(model: BoidsModel) {
 
   private var view: Option[BoidsView] = None
 
-  private val FRAMERATE = 25
+  private val FRAMERATE = 100
   private var framerate: Int = 0
 
   def attachView(view: BoidsView): Unit = {

@@ -1,12 +1,12 @@
 package ass3p1
 
 import akka.actor.typed.scaladsl.Behaviors
-import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.{ActorRef, Behavior}
 import ass3p1.World.Operations.*
 
 object Guardian:
   enum Command:
-    case StartWorld(nBoids: Int)
+    case StartWorld(nBoids: Int, boids: List[pcd.Boid])
     case RestartWorld(nBoids: Int)
     case Execute
     case StopWorld
@@ -18,7 +18,7 @@ object Guardian:
       var currentWorld: Option[ActorRef[World.Operations]] = None
 
       Behaviors.receiveMessage {
-        case StartWorld(n) =>
+        case StartWorld(n, list) =>
           ctx.log.info(s"Guardian starting World with $n boids")
           val world = ctx.spawn(World(n), "World")
           currentWorld = Some(world)
@@ -117,15 +117,3 @@ object Dummy:
           Behaviors.same
       }
     }
-
-
-@main def worldExample(): Unit =
-  val system = ActorSystem(Guardian(), "GuardianSystem")
-
-  import Guardian.Command.*
-
-  system ! StartWorld(1500)
-  Thread.sleep(2000)
-  system ! RestartWorld(300)
-  Thread.sleep(2000)
-  system ! StopWorld
