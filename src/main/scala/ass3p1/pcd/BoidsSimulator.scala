@@ -18,6 +18,7 @@ class BoidsSimulator(model: BoidsModel) {
       val t0 = System.currentTimeMillis()
       val boids = model.getBoids
 
+      //system ! Execute
       boids.foreach(_.updateVelocity(model))
       boids.foreach(_.updatePos(model))
 

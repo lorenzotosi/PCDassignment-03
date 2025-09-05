@@ -8,6 +8,7 @@ object Guardian:
   enum Command:
     case StartWorld(nBoids: Int)
     case RestartWorld(nBoids: Int)
+    case Execute
     case StopWorld
 
   import Command.*
@@ -21,6 +22,11 @@ object Guardian:
           ctx.log.info(s"Guardian starting World with $n boids")
           val world = ctx.spawn(World(n), "World")
           currentWorld = Some(world)
+          Behaviors.same
+
+        case Execute =>
+          if currentWorld.isDefined then
+            currentWorld.get ! World.Operations.Update
           Behaviors.same
 
         case RestartWorld(n) =>

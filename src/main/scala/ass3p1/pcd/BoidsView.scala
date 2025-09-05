@@ -1,9 +1,10 @@
 package ass3p1.pcd
 
+import ass3p1.Guardian.Command.{StartWorld, StopWorld}
+
 import java.awt.*
 import javax.swing.*
 import javax.swing.event.{ChangeEvent, ChangeListener}
-import scala.collection.mutable
 
 class BoidsView(model: BoidsModel, width: Int, height: Int) extends ChangeListener {
 
@@ -14,6 +15,31 @@ class BoidsView(model: BoidsModel, width: Int, height: Int) extends ChangeListen
   private val cp: JPanel = new JPanel()
   val layout: LayoutManager = new BorderLayout()
   cp.setLayout(layout)
+
+  private val topPanel = new JPanel()
+  cp.add(BorderLayout.NORTH, topPanel)
+  topPanel.add(new JLabel("Boids Number"))
+  val txt = new TextField(5)
+  topPanel.add(txt)
+
+  private val startButton = new JButton("Start")
+  startButton.addActionListener(x =>
+    println("Start button pressed")
+    model.actor ! StartWorld(txt.getText.toInt)
+    model.createBoids(txt.getText.toInt)
+    println(model.actor.printTree)
+
+  )
+
+  private val stopButon = new JButton("Stop")
+  stopButon.addActionListener(x =>
+    println("Stop button pressed")
+    model.clearBoids()
+    model.actor ! StopWorld
+  )
+
+  topPanel.add(startButton)
+  topPanel.add(stopButon)
 
   private val boidsPanel: BoidsPanel = new BoidsPanel(this, model)
   cp.add(BorderLayout.CENTER, boidsPanel)
