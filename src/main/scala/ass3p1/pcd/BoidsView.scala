@@ -27,7 +27,6 @@ class BoidsView(model: BoidsModel, width: Int, height: Int) extends ChangeListen
     println("Start button pressed")
     model.createBoids(txt.getText.toInt)
     model.actor ! StartWorld(txt.getText.toInt, model.getBoids)
-    println(model.actor.printTree)
   )
 
   private val stopButon = new JButton("Stop")

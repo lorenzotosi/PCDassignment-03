@@ -20,7 +20,6 @@ object MySystem:
 
       Behaviors.receiveMessage {
         case StartWorld(n, list) =>
-          ctx.log.info(s"Starting World with $n boids")
           val world = ctx.spawn(World(n), "World")
           currentWorld = Some(world)
           Behaviors.same
@@ -31,7 +30,6 @@ object MySystem:
           Behaviors.same
 
         case RestartWorld(n) =>
-          ctx.log.info(s"Restarting World with $n boids")
           currentWorld.foreach { w =>
             ctx.stop(w)
           }
@@ -40,7 +38,6 @@ object MySystem:
           Behaviors.same
 
         case StopWorld =>
-          ctx.log.info("Stopping World")
           currentWorld.foreach(ctx.stop)
           currentWorld = None
           Behaviors.same
@@ -68,10 +65,8 @@ object World:
       def idle: Behavior[Operations] =
         Behaviors.receiveMessage {
           case Start =>
-            ctx.log.info(s"World($nBoids) started")
             Behaviors.same
           case Stop =>
-            ctx.log.info(s"World($nBoids) stopped")
             Behaviors.stopped
           case Update(model) =>
             boidActors.zipWithIndex.foreach { case (actor, id) =>
@@ -93,7 +88,7 @@ object World:
               waitingAcks(expected, newCount)
           case Stop =>
             Behaviors.stopped
-          case _ => Behaviors.unhandled
+          case _ => Behaviors.same
         }
 
       idle
@@ -106,7 +101,6 @@ object BoidActor:
 
   def apply(i: Int): Behavior[Command] =
     Behaviors.setup { ctx =>
-      ctx.log.info(s"Actor $i created")
       Behaviors.receiveMessage {
         case DoUpdate(replyTo, id, model) =>
           getMyBoids(i, model).foreach(_.updateVelocity(model))
