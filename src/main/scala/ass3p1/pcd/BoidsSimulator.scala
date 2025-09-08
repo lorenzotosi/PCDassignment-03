@@ -16,11 +16,8 @@ class BoidsSimulator(model: BoidsModel) {
   def runSimulation(): Unit = {
     while (true) {
       val t0 = System.currentTimeMillis()
-      val boids = model.getBoids
 
-      //system ! Execute
-      boids.foreach(_.updateVelocity(model))
-      boids.foreach(_.updatePos(model))
+      model.actor ! ass3p1.MySystem.Command.Execute
 
       view.foreach(_.update(framerate))
       val t1 = System.currentTimeMillis()

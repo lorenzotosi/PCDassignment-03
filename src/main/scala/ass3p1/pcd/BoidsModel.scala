@@ -1,7 +1,7 @@
 package ass3p1.pcd
 
 import akka.actor.typed.ActorSystem
-import ass3p1.Guardian
+import ass3p1.MySystem
 import pcd.ass01.{P2d, V2d}
 
 import scala.collection.mutable.ListBuffer
@@ -21,7 +21,7 @@ class BoidsModel(nboids: Int,
   private var alignmentWeight: Double = initialAlignmentWeight
   private var cohesionWeight: Double = initialCohesionWeight
 
-  val actor = ActorSystem(Guardian(), "System")
+  val actor = ActorSystem(MySystem(this), "System")
 
   def getBoids: List[Boid] = boids.toList
 

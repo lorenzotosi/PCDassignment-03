@@ -3,8 +3,9 @@ package ass3p1
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import ass3p1.World.Operations.*
+import ass3p1.pcd.BoidsModel
 
-object Guardian:
+object MySystem:
   enum Command:
     case StartWorld(nBoids: Int, boids: List[pcd.Boid])
     case RestartWorld(nBoids: Int)
@@ -13,33 +14,33 @@ object Guardian:
 
   import Command.*
 
-  def apply(): Behavior[Command] =
+  def apply(model: BoidsModel): Behavior[Command] =
     Behaviors.setup { ctx =>
       var currentWorld: Option[ActorRef[World.Operations]] = None
 
       Behaviors.receiveMessage {
         case StartWorld(n, list) =>
-          ctx.log.info(s"Guardian starting World with $n boids")
+          ctx.log.info(s"Starting World with $n boids")
           val world = ctx.spawn(World(n), "World")
           currentWorld = Some(world)
           Behaviors.same
 
         case Execute =>
           if currentWorld.isDefined then
-            currentWorld.get ! World.Operations.Update
+            currentWorld.get ! World.Operations.Update(model)
           Behaviors.same
 
         case RestartWorld(n) =>
-          ctx.log.info(s"Guardian restarting World with $n boids")
+          ctx.log.info(s"Restarting World with $n boids")
           currentWorld.foreach { w =>
-            ctx.stop(w) // termina il world attuale
+            ctx.stop(w)
           }
           val newWorld = ctx.spawn(World(n), "WorldNew_" + System.nanoTime())
           currentWorld = Some(newWorld)
           Behaviors.same
 
         case StopWorld =>
-          ctx.log.info("Guardian stopping World")
+          ctx.log.info("Stopping World")
           currentWorld.foreach(ctx.stop)
           currentWorld = None
           Behaviors.same
@@ -51,7 +52,7 @@ object World:
   enum Operations:
     case Start
     case Stop
-    case Update
+    case Update(model: BoidsModel)
     case Ack(from: Int)
 
   export Operations.*
@@ -60,9 +61,9 @@ object World:
     Behaviors.setup { ctx =>
       val group = if nBoids % 50 != 0 then nBoids / 50 + 1 else nBoids / 50
 
-      val boidActors: Seq[ActorRef[Dummy.Command]] =
+      val boidActors: Seq[ActorRef[BoidActor.Command]] =
         for i <- 0 until group yield
-          ctx.spawn(Dummy(i), s"dummy${i}_${System.nanoTime()}")
+          ctx.spawn(BoidActor(i), s"dummy${i}_${System.nanoTime()}")
 
       def idle: Behavior[Operations] =
         Behaviors.receiveMessage {
@@ -72,10 +73,9 @@ object World:
           case Stop =>
             ctx.log.info(s"World($nBoids) stopped")
             Behaviors.stopped
-          case Update =>
-            ctx.log.info(s"World($nBoids) updating...")
+          case Update(model) =>
             boidActors.zipWithIndex.foreach { case (actor, id) =>
-              actor ! Dummy.DoUpdate(ctx.self, id)
+              actor ! BoidActor.DoUpdate(ctx.self, id, model)
             }
             waitingAcks(expected = boidActors.size, received = 0)
           case Ack(from) =>
@@ -87,14 +87,11 @@ object World:
         Behaviors.receiveMessage {
           case Ack(from) =>
             val newCount = received + 1
-            ctx.log.info(s"World($nBoids) received ACK $newCount/$expected from Dummy $from")
             if newCount == expected then
-              ctx.log.info(s"World($nBoids) update completed ✅")
               idle
             else
               waitingAcks(expected, newCount)
           case Stop =>
-            ctx.log.info(s"World($nBoids) stopped while waiting ACKs")
             Behaviors.stopped
           case _ => Behaviors.unhandled
         }
@@ -103,17 +100,27 @@ object World:
     }
 
 
-object Dummy:
+object BoidActor:
   sealed trait Command
-  case class DoUpdate(replyTo: ActorRef[World.Operations], id: Int) extends Command
+  case class DoUpdate(replyTo: ActorRef[World.Operations], id: Int, model: BoidsModel) extends Command
 
   def apply(i: Int): Behavior[Command] =
     Behaviors.setup { ctx =>
-      ctx.log.info(s"Dummy $i created")
+      ctx.log.info(s"Actor $i created")
       Behaviors.receiveMessage {
-        case DoUpdate(replyTo, id) =>
-          ctx.log.info(s"Dummy $i received update")
+        case DoUpdate(replyTo, id, model) =>
+          getMyBoids(i, model).foreach(_.updateVelocity(model))
+          getMyBoids(i, model).foreach(_.updatePos(model))
           replyTo ! World.Operations.Ack(id)
           Behaviors.same
       }
     }
+
+  def getMyBoids(i: Int, model: BoidsModel): List[pcd.Boid] =
+    val allBoids = model.getBoids
+    val start = i * 50
+    val end = Math.min(start + 50, allBoids.size)
+    if start >= allBoids.size then
+      List()
+    else
+      allBoids.slice(start, end)
