@@ -1,5 +1,13 @@
 package ass3p1.pcd
 
+import akka.actor.typed.Scheduler
+import akka.actor.typed.scaladsl.AskPattern.*
+import akka.util.Timeout
+import ass3p1.MySystem
+import ass3p1.MySystem.Command.Execute
+
+import scala.concurrent.Await
+import scala.concurrent.duration.*
 import scala.util.Try
 
 class BoidsSimulator(model: BoidsModel) {
@@ -14,10 +22,18 @@ class BoidsSimulator(model: BoidsModel) {
   }
 
   def runSimulation(): Unit = {
+    implicit val timeout: Timeout = 1.seconds
+    implicit val scheduler: Scheduler = model.actor.scheduler
+
     while (true) {
       val t0 = System.currentTimeMillis()
 
-      model.actor ! ass3p1.MySystem.Command.Execute
+      val future = model.actor ? (ref => Execute(ref))
+      try {
+        Await.result(future, timeout.duration)
+      } catch {
+        case e: Exception => e.printStackTrace()
+      }
 
       view.foreach(_.update(framerate))
       val t1 = System.currentTimeMillis()

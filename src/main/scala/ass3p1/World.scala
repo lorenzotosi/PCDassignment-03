@@ -1,5 +1,6 @@
 package ass3p1
 
+import akka.Done
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import ass3p1.World.Operations.*
@@ -9,7 +10,7 @@ object MySystem:
   enum Command:
     case StartWorld(nBoids: Int, boids: List[pcd.Boid])
     case RestartWorld(nBoids: Int)
-    case Execute
+    case Execute(replyTo: ActorRef[Done])
     case StopWorld
 
   import Command.*
@@ -24,9 +25,19 @@ object MySystem:
           currentWorld = Some(world)
           Behaviors.same
 
-        case Execute =>
+        case Execute(replyTo) =>
           if currentWorld.isDefined then
-            currentWorld.get ! World.Operations.Update(model)
+            currentWorld.get ! World.Operations.Update(model, replyTo)
+          else
+            replyTo ! Done
+          Behaviors.same
+
+        case RestartWorld(n) =>
+          currentWorld.foreach { w =>
+            ctx.stop(w)
+          }
+          val newWorld = ctx.spawn(World(n), "WorldNew_" + System.nanoTime())
+          currentWorld = Some(newWorld)
           Behaviors.same
 
         case RestartWorld(n) =>
@@ -49,7 +60,7 @@ object World:
   enum Operations:
     case Start
     case Stop
-    case Update(model: BoidsModel)
+    case Update(model: BoidsModel, replyTo: ActorRef[Done])
     case Ack(from: Int)
 
   export Operations.*
@@ -68,24 +79,25 @@ object World:
             Behaviors.same
           case Stop =>
             Behaviors.stopped
-          case Update(model) =>
+          case Update(model, replyTo) =>
             boidActors.zipWithIndex.foreach { case (actor, id) =>
               actor ! BoidActor.DoUpdate(ctx.self, id, model)
             }
-            waitingAcks(expected = boidActors.size, received = 0)
+            waitingAcks(expected = boidActors.size, received = 0, replyTo)
           case Ack(from) =>
             ctx.log.warn(s"Unexpected ACK from Dummy $from (not waiting)")
             Behaviors.same
         }
 
-      def waitingAcks(expected: Int, received: Int): Behavior[Operations] =
+      def waitingAcks(expected: Int, received: Int, replyTo: ActorRef[Done]): Behavior[Operations] =
         Behaviors.receiveMessage {
           case Ack(from) =>
             val newCount = received + 1
             if newCount == expected then
+              replyTo ! Done
               idle
             else
-              waitingAcks(expected, newCount)
+              waitingAcks(expected, newCount, replyTo)
           case Stop =>
             Behaviors.stopped
           case _ => Behaviors.same
