@@ -40,14 +40,6 @@ object MySystem:
           currentWorld = Some(newWorld)
           Behaviors.same
 
-        case RestartWorld(n) =>
-          currentWorld.foreach { w =>
-            ctx.stop(w)
-          }
-          val newWorld = ctx.spawn(World(n), "WorldNew_" + System.nanoTime())
-          currentWorld = Some(newWorld)
-          Behaviors.same
-
         case StopWorld =>
           currentWorld.foreach(ctx.stop)
           currentWorld = None
