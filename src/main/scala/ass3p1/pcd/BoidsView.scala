@@ -1,10 +1,13 @@
 package ass3p1.pcd
 
-import ass3p1.MySystem.Command.{StartWorld, StopWorld}
+import ass3p1.MySystem.Command.StartWorld
+import ass3p1.MySystem.Command.StopWorld
 
 import java.awt.*
 import javax.swing.*
-import javax.swing.event.{ChangeEvent, ChangeListener}
+import javax.swing.event.ChangeEvent
+import javax.swing.event.ChangeListener
+import scala.language.postfixOps
 
 class BoidsView(model: BoidsModel, width: Int, height: Int) extends ChangeListener {
 
@@ -25,8 +28,12 @@ class BoidsView(model: BoidsModel, width: Int, height: Int) extends ChangeListen
   private val startButton = new JButton("Start")
   startButton.addActionListener(x =>
     println("Start button pressed")
-    model.createBoids(txt.getText.toInt)
-    model.actor ! StartWorld(txt.getText.toInt, model.getBoids)
+    if txt.getText.isEmpty then println("Please enter the number of boids.")
+    else if model.getBoids.nonEmpty then
+      println("Simulation is already running. Please stop it before starting a new one.")
+    else
+      model.createBoids(txt.getText.toInt)
+      model.actor ! StartWorld(txt.getText.toInt, model.getBoids)
   )
 
   private val stopButon = new JButton("Stop")
@@ -67,7 +74,7 @@ class BoidsView(model: BoidsModel, width: Int, height: Int) extends ChangeListen
     slider.setMinorTickSpacing(1)
     slider.setPaintTicks(true)
     slider.setPaintLabels(true)
-    //val labelTable: mutable.HashMap[Int, JLabel] = mutable.HashMap()
+    // val labelTable: mutable.HashMap[Int, JLabel] = mutable.HashMap()
     val labelTable: java.util.Hashtable[Integer, JLabel] = new java.util.Hashtable()
     labelTable.put(0, new JLabel("0"))
     labelTable.put(10, new JLabel("1"))
